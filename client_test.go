@@ -28,7 +28,7 @@ func TestURLBuilder(t *testing.T) {
 }
 
 func TestUrlFromHistoricalOptions(t *testing.T) {
-	hc, err := NewHistoricalClient()
+	hc, err := NewClient()
 	require.NoError(t, err)
 
 	loc, err := NewLocation(52.5161, 13.4104) // Berlin

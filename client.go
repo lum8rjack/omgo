@@ -30,14 +30,6 @@ func NewClient() (Client, error) {
 	}, nil
 }
 
-func NewHistoricalClient() (HistoricalClient, error) {
-	return HistoricalClient{
-		URL:       "https://archive-api.open-meteo.com/v1/archive",
-		UserAgent: DefaultUserAgent,
-		Client:    http.DefaultClient,
-	}, nil
-}
-
 type Location struct {
 	lat, lon float64
 }
@@ -165,8 +157,8 @@ func (c Client) Get(ctx context.Context, loc Location, opts *Options) ([]byte, e
 	return body, nil
 }
 
-func (hc HistoricalClient) Get(ctx context.Context, loc Location, opts *HistoricalOptions) ([]byte, error) {
-	url, err := urlFromHistoricalOptions(hc.URL, loc, opts)
+func (c *Client) GetHistocial(ctx context.Context, loc Location, opts *HistoricalOptions) ([]byte, error) {
+	url, err := urlFromHistoricalOptions(c.URL, loc, opts)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to form url from historical options %q", err)
 	}
@@ -174,9 +166,9 @@ func (hc HistoricalClient) Get(ctx context.Context, loc Location, opts *Historic
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", hc.UserAgent)
+	req.Header.Set("User-Agent", c.UserAgent)
 
-	res, err := hc.Client.Do(req)
+	res, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
