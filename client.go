@@ -14,12 +14,6 @@ type Client struct {
 	Client    *http.Client
 }
 
-type HistoricalClient struct {
-	URL       string
-	UserAgent string
-	Client    *http.Client
-}
-
 const DefaultUserAgent = "Open-Meteo_Go_Client"
 
 func NewClient() (Client, error) {
@@ -96,15 +90,15 @@ func urlFromHistoricalOptions(baseURL string, loc Location, opts *HistoricalOpti
 	url := fmt.Sprintf(`%s?latitude=%f&longitude=%f`, baseURL, loc.lat, loc.lon)
 
 	if opts.StartDate == "" || opts.EndDate == "" {
-		return "", fmt.Errorf("please, provide a start date and end date")
+		return "", fmt.Errorf("please provide a start date and end date for historical option")
 	}
 
 	if opts == nil {
 		return url, nil
 	}
 
-	// TODO: if end_date is equal or less than end_date throw an error
-	url = fmt.Sprintf(`%s&start_date=%s&end_date=%s`, url, opts.StartDate, opts.EndDate)
+	// TODO: if end_date is equal or less than end_date return an error
+	url += fmt.Sprintf(`%s&start_date=%s&end_date=%s`, url, opts.StartDate, opts.EndDate)
 
 	if opts.TemperatureUnit != "" {
 		url = fmt.Sprintf(`%s&temperature_unit=%s`, url, opts.TemperatureUnit)
@@ -158,10 +152,13 @@ func (c Client) Get(ctx context.Context, loc Location, opts *Options) ([]byte, e
 }
 
 func (c *Client) GetHistocial(ctx context.Context, loc Location, opts *HistoricalOptions) ([]byte, error) {
+	c.URL = "https://archive-api.open-meteo.com/v1/archive"
+
 	url, err := urlFromHistoricalOptions(c.URL, loc, opts)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to form url from historical options %q", err)
 	}
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -173,14 +170,16 @@ func (c *Client) GetHistocial(ctx context.Context, loc Location, opts *Historica
 		return nil, err
 	}
 	defer res.Body.Close()
+
 	if res.StatusCode != 200 {
 		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("%s - %s", res.Status, body)
+		return nil, fmt.Errorf("error status %s, response %s", res.Status, body)
 	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
+
 	return body, nil
 }

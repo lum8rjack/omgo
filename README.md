@@ -47,11 +47,8 @@ func main() {
 	// res.HourlyTimes contains the timestamps for each prediction
 	// res.DailyMetrics["temperature_2m_max"] contains daily maximum values for the temperature_2m metric
 	// res.DailyTimes contains the timestamps for all daily predictions
-
-	h, _ := omgo.NewHistoricalClient()
-	hloc, _ := omgo.NewLocation(52.5235, 13.4115)
 	
-	opts := omgo.HistoricalOptions{
+	hopts := omgo.HistoricalOptions{
 		TemperatureUnit:   "fahrenheit",
 		WindspeedUnit:     "mph",
 		PrecipitationUnit: "inch",
@@ -61,6 +58,9 @@ func main() {
 		HourlyMetrics:     []string{"cloudcover, relativehumidity_2m"},
 		DailyMetrics:      []string{"temperature_2m_max"},
 	}
+
+	hres, _ := f.Historical(context.Background(), loc, &hopts)
+	fmt.Println(hres)
 }
 
 

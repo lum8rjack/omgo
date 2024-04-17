@@ -15,7 +15,17 @@ type ForecastJSON struct {
 	HourlyMetrics  map[string]json.RawMessage `json:"hourly"` // Parsed later, the API returns both Time and floats here
 	DailyUnits     map[string]string          `json:"daily_units"`
 	DailyMetrics   map[string]json.RawMessage `json:"daily"` // Parsed later, the API returns both Time and floats here
+}
 
+type HistoricalJSON struct {
+	Latitude       float64
+	Longitude      float64
+	Elevation      float64
+	GenerationTime float64                    `json:"generationtime_ms"`
+	HourlyUnits    map[string]string          `json:"hourly_units"`
+	HourlyMetrics  map[string]json.RawMessage `json:"hourly"` // Parsed later, the API returns both Time and floats here
+	DailyUnits     map[string]string          `json:"daily_units"`
+	DailyMetrics   map[string]json.RawMessage `json:"daily"` // Parsed later, the API returns both Time and floats here
 }
 
 type Forecast struct {
@@ -30,6 +40,19 @@ type Forecast struct {
 	DailyUnits     map[string]string
 	DailyMetrics   map[string][]float64 // Parsed from ForecastJSON.DailyMetrics
 	DailyTimes     []time.Time          // Parsed from ForecastJSON.DailyMetrics
+}
+
+type Historical struct {
+	Latitude       float64
+	Longitude      float64
+	Elevation      float64
+	GenerationTime float64
+	HourlyUnits    map[string]string
+	HourlyMetrics  map[string][]float64 // Parsed from HistoricalJSON.HourlyMetrics
+	HourlyTimes    []time.Time          // Parsed from HistoricalJSON.HourlyMetrics
+	DailyUnits     map[string]string
+	DailyMetrics   map[string][]float64 // Parsed from HistoricalJSON.DailyMetrics
+	DailyTimes     []time.Time          // Parsed from HistoricalJSON.DailyMetrics
 }
 
 type CurrentWeather struct {
@@ -56,6 +79,77 @@ func ParseBody(body []byte) (*Forecast, error) {
 		Elevation:      f.Elevation,
 		GenerationTime: f.GenerationTime,
 		CurrentWeather: f.CurrentWeather,
+		HourlyUnits:    f.HourlyUnits,
+		HourlyTimes:    []time.Time{},
+		HourlyMetrics:  make(map[string][]float64),
+		DailyUnits:     f.DailyUnits,
+		DailyTimes:     []time.Time{},
+		DailyMetrics:   make(map[string][]float64),
+	}
+
+	for k, v := range f.HourlyMetrics {
+		if k == "time" {
+			// We unmarshal into an ApiTime array because of the custom formatting
+			// of the timestamp in the API response
+			target := []ApiTime{}
+			err := json.Unmarshal(v, &target)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, at := range target {
+				fc.HourlyTimes = append(fc.HourlyTimes, at.Time)
+			}
+
+			continue
+		}
+		target := []float64{}
+		err := json.Unmarshal(v, &target)
+		if err != nil {
+			return nil, err
+		}
+		fc.HourlyMetrics[k] = target
+	}
+
+	for k, v := range f.DailyMetrics {
+		if k == "time" {
+			// We unmarshal into an ApiTime array because of the custom formatting
+			// of the timestamp in the API response
+			target := []ApiDate{}
+			err := json.Unmarshal(v, &target)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, at := range target {
+				fc.DailyTimes = append(fc.DailyTimes, at.Time)
+			}
+
+			continue
+		}
+		target := []float64{}
+		err := json.Unmarshal(v, &target)
+		if err != nil {
+			return nil, err
+		}
+		fc.DailyMetrics[k] = target
+	}
+
+	return fc, nil
+}
+
+func ParseHistoricalBody(body []byte) (*Historical, error) {
+	f := &HistoricalJSON{}
+	err := json.Unmarshal(body, f)
+	if err != nil {
+		return nil, err
+	}
+
+	fc := &Historical{
+		Latitude:       f.Latitude,
+		Longitude:      f.Longitude,
+		Elevation:      f.Elevation,
+		GenerationTime: f.GenerationTime,
 		HourlyUnits:    f.HourlyUnits,
 		HourlyTimes:    []time.Time{},
 		HourlyMetrics:  make(map[string][]float64),
