@@ -16,52 +16,85 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
 
-	"github.com/hectormalot/omgo"
+	"github.com/lum8rjack/omgo"
 )
 
 func main() {
-	f, _ := omgo.NewClient()
+	f, err := omgo.NewClient()
+	if err != nil {
+		fmt.Printf("error creating client: %v", err)
+		os.Exit(0)
+	}
 
-	// Get the current weather for amsterdam
-	loc, _ := omgo.NewLocation(52.3738, 4.8910)
-	res, _ := f.CurrentWeather(context.Background(), loc, nil)
-	fmt.Println("The temperature in Amsterdam is: ", res.Temperature)
+	// Get the current weather for Chicago
+	loc, err := omgo.NewLocation(41.8781, 87.6298)
+	if err != nil {
+		fmt.Printf("error creating location: %v", err)
+		os.Exit(0)
+	}
+	res, err := f.CurrentWeather(context.Background(), loc, nil)
+	if err != nil {
+		fmt.Printf("error getting current weather: %v", err)
+		os.Exit(0)
+	}
+	fmt.Printf("The temperature in Chicago is: %.2f degrees C\n", res.Temperature)
 
-	// Get the humidity and cloud cover forecast for berlin, 
+	// Get the humidity and cloud cover forecast for Chicago,
 	// including the last 2 days and non-metric units
-	loc, _ := omgo.NewLocation(52.5235, 13.4115)
 	opts := omgo.ForecastOptions{
 		TemperatureUnit:   "fahrenheit",
 		WindspeedUnit:     "mph",
 		PrecipitationUnit: "inch",
-		Timezone:          "US/Eastern",
-		HourlyMetrics:     []string{"cloudcover, relativehumidity_2m"},
+		Timezone:          "US/Central",
+		HourlyMetrics:     []string{"cloudcover"},
 		DailyMetrics:      []string{"temperature_2m_max"},
 	}
-	
-	res, _ := f.Forecast(context.Background(), loc, &opts)
-	fmt.Println(res)
-	// res.HourlyMetrics["cloudcover"] contains an array of cloud coverage predictions
-	// res.HourlyMetrics["relativehumidity_2m"] contains an array of relative humidity predictions
-	// res.HourlyTimes contains the timestamps for each prediction
-	// res.DailyMetrics["temperature_2m_max"] contains daily maximum values for the temperature_2m metric
-	// res.DailyTimes contains the timestamps for all daily predictions
-	
+
+	fres, err := f.Forecast(context.Background(), loc, &opts)
+	if err != nil {
+		fmt.Printf("error getting forecast: %v", err)
+		os.Exit(0)
+	}
+	fmt.Printf("Current Temperature: %.2f degrees F\n", fres.CurrentWeather.Temperature)
+
+	// Loop over the cloud cover every hour for 7 days
+	for x, h := range fres.HourlyMetrics["cloudcover"] {
+		fmt.Printf("%d - Cloud cover: %.2f\n", x, h)
+	}
+	// fres.HourlyTimes contains the timestamps for each prediction
+	// fres.DailyMetrics["temperature_2m_max"] contains daily maximum values for the temperature_2m metric
+	// fres.DailyTimes contains the timestamps for all daily predictions
+
 	hopts := omgo.HistoricalOptions{
 		TemperatureUnit:   "fahrenheit",
 		WindspeedUnit:     "mph",
 		PrecipitationUnit: "inch",
-		Timezone:          "US/Eastern",
-		StartDate:         "2023-05-01",
-		EndDate:           "2023-06-01",
-		HourlyMetrics:     []string{"cloudcover, relativehumidity_2m"},
-		DailyMetrics:      []string{"temperature_2m_max"},
+		Timezone:          "US/Central",
+		StartDate:         "2024-06-01",
+		EndDate:           "2024-06-10",
+		DailyMetrics:      []string{"temperature_2m_max", "temperature_2m_mean"},
 	}
 
-	hres, _ := f.Historical(context.Background(), loc, &hopts)
-	fmt.Println(hres)
+	hres, err := f.Historical(context.Background(), loc, &hopts)
+	if err != nil {
+		fmt.Printf("error getting historical data: %v", err)
+		os.Exit(0)
+	}
+
+	// Convert the start date from string to time.Time
+	startDate, err := time.Parse("2006-01-02", hopts.StartDate)
+	if err != nil {
+		fmt.Printf("error converting start date: %v", err)
+		os.Exit(0)
+	}
+
+	// Loop over each day
+	for x, d := range hres.DailyMetrics["temperature_2m_max"] {
+		newdate := startDate.Add(time.Hour * time.Duration(24*x))
+		fmt.Printf("%s - Mean Temp: %.2f\n", newdate.Format("2006-01-02"), d)
+	}
 }
-
-
 ```
