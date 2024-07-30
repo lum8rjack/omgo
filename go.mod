@@ -1,4 +1,4 @@
-module github.com/dio-av/omgo
+module github.com/lum8rjack/omgo
 
 go 1.17
 

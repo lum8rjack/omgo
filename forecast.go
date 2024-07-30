@@ -9,8 +9,8 @@ import (
 // Use `Options` to specify which metrics to retrieve. The response is a Forecast
 // struct that will contains the current weather, all requested hourly predictions and
 // all requested daily predictions
-func (c Client) Forecast(ctx context.Context, loc Location, opts *Options) (*Forecast, error) {
-	body, err := c.Get(ctx, loc, opts)
+func (c Client) Forecast(ctx context.Context, loc Location, opts *ForecastOptions) (*Forecast, error) {
+	body, err := c.GetForecast(ctx, loc, opts)
 	if err != nil {
 		return nil, err
 	}

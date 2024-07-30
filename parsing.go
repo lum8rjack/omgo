@@ -138,6 +138,9 @@ func ParseBody(body []byte) (*Forecast, error) {
 	return fc, nil
 }
 
+// ParseHistoricalBody converts the API response body into a Historical struct
+// Rationale: The API returns a map with both times as well as floats, this function
+// unmarshalls in 2 steps in order to not return a map[string][]interface{}
 func ParseHistoricalBody(body []byte) (*Historical, error) {
 	f := &HistoricalJSON{}
 	err := json.Unmarshal(body, f)
